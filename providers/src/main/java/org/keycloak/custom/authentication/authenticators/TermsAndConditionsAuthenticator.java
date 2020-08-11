@@ -45,7 +45,7 @@ public class TermsAndConditionsAuthenticator implements Authenticator {
             tacIds.add(realmTacId);
         }
 
-        ClientModel client = context.getClientSession().getClient();
+        ClientModel client = context.getAuthenticationSession().getClient();
         String clientTacIdString = client.getAttribute("CLIENT_TAC");
         if (clientTacIdString != null) {
             Integer clientTacId = new Integer(clientTacIdString);

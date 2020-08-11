@@ -26,6 +26,7 @@ import org.keycloak.common.util.ServerCookie;
 import org.keycloak.custom.authentication.credentialprovider.SecretQuestionCredentialProvider;
 import org.keycloak.custom.authentication.requiredactions.SecretQuestionRequiredAction;
 import org.keycloak.models.*;
+import org.keycloak.common.util.ServerCookie.SameSiteAttributeValue;
 
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
@@ -99,7 +100,7 @@ public class SecretQuestionAuthenticator implements Authenticator {
     public static void addCookie(String name, String value, String path, String domain, String comment, int maxAge, boolean secure, boolean httpOnly) {
         HttpResponse response = ResteasyProviderFactory.getContextData(HttpResponse.class);
         StringBuffer cookieBuf = new StringBuffer();
-        ServerCookie.appendCookieValue(cookieBuf, 1, name, value, path, domain, comment, maxAge, secure, httpOnly);
+        ServerCookie.appendCookieValue(cookieBuf, 1, name, value, path, domain, comment, maxAge, secure, httpOnly, SameSiteAttributeValue.NONE);
         String cookie = cookieBuf.toString();
         response.getOutputHeaders().add(HttpHeaders.SET_COOKIE, cookie);
     }
