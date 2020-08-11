@@ -19,6 +19,7 @@ package org.keycloak.custom.authentication.credentialprovider;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.credential.CredentialProviderFactory;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.credential.*;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -26,13 +27,16 @@ import org.keycloak.models.KeycloakSession;
  * @version $Revision: 1 $
  */
 public class SecretQuestionCredentialProviderFactory implements CredentialProviderFactory<SecretQuestionCredentialProvider> {
+  public static final String PROVIDER_ID =  "secret-question";
+
     @Override
     public String getId() {
-        return "secret-question";
+        return PROVIDER_ID;
     }
 
     @Override
     public CredentialProvider create(KeycloakSession session) {
         return new SecretQuestionCredentialProvider(session);
     }
+
 }

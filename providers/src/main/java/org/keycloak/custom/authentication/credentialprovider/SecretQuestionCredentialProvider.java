@@ -17,26 +17,32 @@
 package org.keycloak.custom.authentication.credentialprovider;
 
 import org.keycloak.common.util.Time;
-import org.keycloak.credential.*;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.cache.CachedUserModel;
 import org.keycloak.models.cache.OnUserCache;
+import org.keycloak.credential.*;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.log4j.Logger;
 
+import org.keycloak.custom.authentication.authenticators.SecretQuestionAuthenticatorFactory;
+import org.keycloak.custom.authentication.authenticators.SecretQuestionCredentialModel;
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @author <a href="mailto:bward@redhat.com">Brian Ward</a>
  * @version $Revision: 1 $
  */
 public class SecretQuestionCredentialProvider implements CredentialProvider, CredentialInputValidator, CredentialInputUpdater, OnUserCache {
+
+    private static final Logger logger = Logger.getLogger(SecretQuestionCredentialProvider.class);
+
     public static final String SECRET_QUESTION = "SECRET_QUESTION";
     public static final String CACHE_KEY_BASE = SecretQuestionCredentialProvider.class.getName() + "." + SECRET_QUESTION;
 
@@ -46,7 +52,16 @@ public class SecretQuestionCredentialProvider implements CredentialProvider, Cre
         this.session = session;
     }
 
-    public CredentialModel getSecret(RealmModel realm, UserModel user, String questionId) {
+    @Override
+    public String getType() {
+        return SecretQuestionCredentialProvider.SECRET_QUESTION;
+    }
+
+    private UserCredentialStore getCredentialStore() {
+        return session.userCredentialManager();
+    }
+
+     public CredentialModel getSecret(RealmModel realm, UserModel user, String questionId) {
         CredentialModel secret = null;
         if (user instanceof CachedUserModel) {
             CachedUserModel cached = (CachedUserModel)user;
@@ -56,6 +71,11 @@ public class SecretQuestionCredentialProvider implements CredentialProvider, Cre
             secret = getSecretQuestionCredential(realm, user, questionId);
         }
         return secret;
+    }
+
+    @Override
+    public SecretQuestionCredentialModel getCredentialFromModel(CredentialModel model) {
+        return SecretQuestionCredentialModel.createFromCredentialModel(model);
     }
 
     private CredentialModel getSecretQuestionCredential(RealmModel realm, UserModel user, String questionId){
@@ -108,7 +128,20 @@ public class SecretQuestionCredentialProvider implements CredentialProvider, Cre
         if (!SECRET_QUESTION.equals(credentialType)) return;
         session.userCredentialManager().disableCredentialType(realm, user, credentialType);
         session.userCache().evict(realm, user);
+    }
 
+    @Override
+    public CredentialModel createCredential(RealmModel realm, UserModel user, CredentialModel credentialModel) {
+        if (credentialModel.getCreatedDate() == null) {
+            credentialModel.setCreatedDate(Time.currentTimeMillis());
+        }
+        return getCredentialStore().createCredential(realm, user, credentialModel);
+    }
+
+    @Override
+    public boolean deleteCredential(RealmModel realm, UserModel user, String credentialId) {
+        getCredentialStore().removeStoredCredential(realm, user, credentialId);
+        return true;
     }
 
     @Override
@@ -153,4 +186,17 @@ public class SecretQuestionCredentialProvider implements CredentialProvider, Cre
             creds.stream().forEach(cred -> user.getCachedWith().put(CACHE_KEY_BASE + cred.getDevice(), cred));
         }
     }
-}
+
+    @Override
+      public CredentialTypeMetadata getCredentialTypeMetadata(CredentialTypeMetadataContext context) {
+        return CredentialTypeMetadata.builder()
+            .type(getType())
+            .category(CredentialTypeMetadata.Category.TWO_FACTOR)
+            .displayName(SecretQuestionCredentialProviderFactory.PROVIDER_ID)
+            .helpText("secret-question-text")
+            .createAction(SecretQuestionAuthenticatorFactory.PROVIDER_ID)
+            .removeable(false)
+            .build(session);
+        }
+
+  }
